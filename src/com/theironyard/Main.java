@@ -7,7 +7,7 @@ import java.util.Random;
 import static com.theironyard.Main.EOF;
 
 public class Main {
-    public static final String EOF;
+    public static final String EOF = "EOF";
 
     public static void main(String[] args) {
         List<String> buffer = new ArrayList<String>();
@@ -25,6 +25,7 @@ public class Main {
 
 class MyProducer implements Runnable {
     private List<String> buffer;
+
     private String color;
 
     public MyProducer(List<String> buffer, String color) {
@@ -36,10 +37,13 @@ class MyProducer implements Runnable {
         Random random = new Random();
         String[] nums = {"1", "2", "3", "4", "5"};
 
+
         for(String num: nums) {
             try {
                 System.out.println(color + "Adding..." + num);
-                buffer.add(num);
+                synchronized (buffer) {
+                    buffer.add(num);
+                }
 
                 Thread.sleep(random.nextInt(1000));
             } catch(InterruptedException e) {
@@ -48,7 +52,9 @@ class MyProducer implements Runnable {
         }
 
         System.out.println(color + "Adding EOF and exiting...");
-        buffer.add("EOF");
+        synchronized (buffer) {
+            buffer.add("EOF");
+        }
     }
 }
 
@@ -62,16 +68,20 @@ class MyConsumer implements Runnable {
     }
 
     public void run() {
-        while(true) {
-            if(buffer.isEmpty()) {
-                continue;
+        while (true) {
+            synchronized (buffer) {
+                if (buffer.isEmpty()) {
+                    continue;
+                }
+                    if (buffer.get(0).equals(EOF)) {
+                        System.out.println(color + "Exiting");
+                        break;
+                    } else {
+                        System.out.println(color + "Removed " + buffer.remove(0));
+                    }
+                }
             }
-            if(buffer.get(0).equals(EOF)) {
-                System.out.println(color + "Exiting");
-                break;
-            } else {
-                System.out.println(color + "Removed " + buffer.remove(0));
-            }
+
         }
     }
-}
+
